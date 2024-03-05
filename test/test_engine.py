@@ -1,5 +1,7 @@
 import torch
 from micrograd.engine import Value
+from micrograd.nn import Neuron, Layer, MLP
+import matplotlib.pyplot as plt
 
 def test_sanity_check():
 
@@ -24,6 +26,40 @@ def test_sanity_check():
     assert ymg.data == ypt.data.item()
     # backward pass went well
     assert xmg.grad == xpt.grad.item()
+
+def f(x):
+    return 2*x
+
+def test_linear():
+
+    n = Neuron(1, False)
+    x = [1]
+
+    costs = []
+
+    for i in range(0, 10):
+        p = n(x)
+        l = (f(x)[0] - p)**2
+        costs.append(l)
+        print(f"weights {i}: ", n.w, f"prediction {i}: ", p, f"cost {i}: ", l)
+        p.backward()
+        for w in n.w:
+            print("w", w, "w.grad", w.grad)
+            w += -0.1*w.grad
+            print(w)
+
+    # Generating x coordinates from 0 to the length of the list - 1
+    x = list(range(len(costs)))
+    y = list(map(lambda cost: cost.data, costs))
+
+    # Plotting each value on the x,y plane
+    plt.plot(x, y, marker='o')  # 'o' creates a circle marker for each point
+    plt.title('Plot of Values')
+    plt.xlabel('Index (x)')
+    plt.ylabel('Value (y)')
+
+    # Displaying the plot
+    plt.show()
 
 def test_more_ops():
 
@@ -65,3 +101,6 @@ def test_more_ops():
     # backward pass went well
     assert abs(amg.grad - apt.grad.item()) < tol
     assert abs(bmg.grad - bpt.grad.item()) < tol
+
+test_sanity_check()
+test_linear()
