@@ -28,37 +28,53 @@ def test_sanity_check():
     assert xmg.grad == xpt.grad.item()
 
 def f(x):
-    return 2*x
+    return 3*x
 
-def test_linear():
+def normalize(x):
+    mean = sum(x)/len(x)
+    std = (sum([(xi - mean)**2 for xi in x])/len(x))**0.5
+    return [(xi - mean)/std for xi in x]
 
-    n = Neuron(1, False)
-    x = [1]
+def train(x, lr, e):
 
+    x_norm = normalize(x)
+
+    n = Neuron(len(x), False)
     costs = []
+    for _ in range(e):
+        cost = 0
+        for i in range(len(x_norm)):
+            xi = x_norm[i]
+            prediction = n([xi])
+            cost += (f(xi) - prediction)**2
+        cost = cost/len(x_norm)
+        costs.append(cost.data)
 
-    for i in range(0, 10):
-        p = n(x)
-        l = (f(x)[0] - p)**2
-        costs.append(l)
-        print(f"weights {i}: ", n.w, f"prediction {i}: ", p, f"cost {i}: ", l)
-        p.backward()
-        for w in n.w:
-            print("w", w, "w.grad", w.grad)
-            w += -0.1*w.grad
-            print(w)
+        cost.backward()
+        for i in range(len(n.w)):
+            n.w[i] += -lr * n.w[i].grad
+    
+    print(costs)
+    print(n([x[0]]), f(x[0]))
+    show_loss_curve(costs)
+    return n
 
-    # Generating x coordinates from 0 to the length of the list - 1
-    x = list(range(len(costs)))
-    y = list(map(lambda cost: cost.data, costs))
+def test(x, n):
+    avg_loss = 0
+    for xi in x:
+        print(xi, n([xi]).data, f(xi))
+        avg_loss += (f(xi) - n([xi]))**2
+    avg_loss = avg_loss/len(x)
 
-    # Plotting each value on the x,y plane
-    plt.plot(x, y, marker='o')  # 'o' creates a circle marker for each point
+def show_loss_curve(costs):
+    x_coords = list(range(len(costs)))
+    y_coords = [cost for cost in costs]
+
+    plt.plot(x_coords, y_coords, marker='o')
     plt.title('Plot of Values')
-    plt.xlabel('Index (x)')
-    plt.ylabel('Value (y)')
+    plt.xlabel('Iteration')
+    plt.ylabel('Loss')
 
-    # Displaying the plot
     plt.show()
 
 def test_more_ops():
@@ -103,4 +119,14 @@ def test_more_ops():
     assert abs(bmg.grad - bpt.grad.item()) < tol
 
 test_sanity_check()
-test_linear()
+
+training_set = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+n = train(x=training_set, lr=0.5, e=3)
+test_set = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+test(test_set, n)
+# test_set = [[11], [12], [13], [14], [15], [16], [17], [18], [19], [20]]
+
+# trained_neuron = train_neuron(training_set)
+# predictions = test_neuron(trained_neuron, test_set)
+# print(predictions)
+# train_neuron_single()
