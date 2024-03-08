@@ -1,5 +1,5 @@
 import random
-from micrograd.engine import Value
+from engine import Value
 
 class Module:
 
@@ -19,7 +19,9 @@ class Neuron(Module):
 
     def __call__(self, x):
         act = sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
-        return act.relu() if self.nonlin else act
+        r = act.sigmoid() if self.nonlin else act
+        return r
+        #return act.relu() if self.nonlin else act
 
     def parameters(self):
         return self.w + [self.b]

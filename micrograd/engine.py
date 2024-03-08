@@ -1,4 +1,4 @@
-
+import math
 class Value:
     """ stores a single scalar value and its gradient """
 
@@ -51,6 +51,34 @@ class Value:
 
         return out
 
+    def threshold(self):
+        out = Value(0 if self.data < 0 else 1, (self,), 'Threshold')
+
+        def _backward():
+            self.grad += (out.data > 0) * out.grad
+        out._backward = _backward
+
+        return out
+
+    def threshold_sig(self):
+        out = Value(0 if self.data <= 0.5 else 1, (self,), 'Threshold')
+
+        def _backward():
+            self.grad += (out.data > 0) * out.grad
+        out._backward = _backward
+
+        return out
+
+    def sigmoid(self):
+        x = self.data
+        out = Value(1 / (1 + math.exp(-x)), (self,), 'Sigmoid')
+        
+        def _backward():
+            self.grad += out.data * (1 - out.data) * out.grad
+        
+        out._backward = _backward
+        return out
+
     def backward(self):
 
         # topological order all of the children in the graph
@@ -65,6 +93,27 @@ class Value:
         build_topo(self)
 
         # go one variable at a time and apply the chain rule to get its gradient
+        self.grad = 1
+        for v in reversed(topo):
+            v._backward()
+    
+    def backward_iterative(self):
+        topo = []
+        visited = set()
+        stack = [self]
+
+        while stack:
+            v = stack.pop()
+            if v not in visited:
+                visited.add(v)
+                stack.append(v)  # Re-add the node to process it after its children
+                for child in v._prev:
+                    if child not in visited:
+                        stack.append(child)
+            else:
+                if v not in topo:  # Ensure the node is not already in topo before appending
+                    topo.append(v)
+
         self.grad = 1
         for v in reversed(topo):
             v._backward()
