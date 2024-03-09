@@ -19,9 +19,9 @@ class Neuron(Module):
 
     def __call__(self, x):
         act = sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
-        r = act.sigmoid() if self.nonlin else act
-        return r
-        #return act.relu() if self.nonlin else act
+        # return act.sigmoid() if self.nonlin else act
+        return act.leaky_relu() if self.nonlin else act
+        # return act.relu() if self.nonlin else act
 
     def parameters(self):
         return self.w + [self.b]

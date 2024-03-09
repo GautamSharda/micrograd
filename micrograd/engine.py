@@ -51,7 +51,7 @@ class Value:
 
         return out
 
-    def threshold(self):
+    def threshold(self): # this does not make sense
         out = Value(0 if self.data < 0 else 1, (self,), 'Threshold')
 
         def _backward():
@@ -65,6 +65,7 @@ class Value:
 
         def _backward():
             self.grad += (out.data > 0) * out.grad
+
         out._backward = _backward
 
         return out
@@ -77,6 +78,16 @@ class Value:
             self.grad += out.data * (1 - out.data) * out.grad
         
         out._backward = _backward
+        return out
+
+    def leaky_relu(self, alpha=0.01):
+        out = Value(self.data if self.data > 0 else alpha * self.data, (self,), 'LeakyReLU')
+
+        def _backward():
+            self.grad += (out.data > 0) * out.grad + (out.data <= 0) * alpha * out.grad
+
+        out._backward = _backward
+
         return out
 
     def backward(self):
@@ -116,6 +127,21 @@ class Value:
 
         self.grad = 1
         for v in reversed(topo):
+            v._backward()
+
+    def _backward_iterative(self):
+        topo = []
+        q = [self]
+        visited = set()
+        while q:
+            v = q.pop()
+            if v not in visited:
+                visited.add(v)
+                topo.append(v)
+                for child in v._prev:
+                    q.append(child)
+        self.grad = 1
+        for v in topo:
             v._backward()
 
     def __neg__(self): # -self

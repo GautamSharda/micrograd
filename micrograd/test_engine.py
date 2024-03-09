@@ -1,3 +1,4 @@
+import timeit
 import torch
 from engine import Value
 from nn import Neuron, Layer, MLP
@@ -29,8 +30,8 @@ def test_sanity_check():
 
 def f(xi):
     #return int(bool(xi[0]) != bool(xi[1])) # xor
-    return xi[0] and xi[1] # and
-    #return 3*xi[0] # 3x
+    # return xi[0] and xi[1] # and
+    return 3*xi[0] # 3x
 
 def normalize(xi):
     if len(xi) < 2:
@@ -42,25 +43,25 @@ def normalize(xi):
     return [(xii - mean)/std for xii in xi]
 
 def train(x, y, lr, e):
-    n = Neuron(len(x))
+    n = Neuron(len(x), False)
     costs = []
     # training loop for e epochs
     for _ in range(e):
         cost = 0
         # forward pass to compute "avg loss" (cost) over all inputs in batch
         for i in range(len(x)):
-            xi = x[i]# normalize(x[i])
+            xi = normalize(x[i]) # xi = x[i]
             prediction = n(xi)
-            #print(y[i], prediction)
+            # print(y[i], prediction)
             cost += (y[i] - prediction)**2
         cost = cost/len(x)
         costs.append(cost.data)
         # backprop to compute gradients of cost w.r.t weights
-        cost.backward_iterative()
+        cost._backward_iterative()
         for i in range(len(n.w)):
             # update weights as per gradient descent
             n.w[i] += -lr * n.w[i].grad
-            # n.b += -lr * n.b.grad
+            n.b += -lr * n.b.grad
     
     #print(costs)
     #print(n(x[0]), y[0])
@@ -70,8 +71,8 @@ def train(x, y, lr, e):
 def test(x, y, n):
     avg_loss = 0
     for i in range(len(x)):
-        print(x[i], n(x[i]).threshold_sig().data, y[i])
-        avg_loss += (y[i] - n(x[i]).threshold_sig())**2
+        print(x[i], n(x[i]).data, y[i])
+        avg_loss += (y[i] - n(x[i]))**2
     avg_loss = avg_loss/len(x)
     print("Avg test loss: ", avg_loss.data)
 
@@ -85,6 +86,10 @@ def show_loss_curve(costs):
     plt.ylabel('Loss')
 
     plt.show()
+
+def training_benchmark(training_set_x, training_set_y, lr, e):
+    execution_time = timeit.timeit(lambda: train(x=training_set_x, y=training_set_y, lr=lr, e=e), number=1)
+    print("execution time: ", execution_time)
 
 def test_more_ops():
 
@@ -129,11 +134,15 @@ def test_more_ops():
 
 test_sanity_check()
 
-training_set_x = [[0, 0], [0, 1], [1, 0], [1, 1]]
-#training_set_x = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
+# training_set_x = [[0, 0], [0, 1], [1, 0], [1, 1]]
+training_set_x = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
 training_set_y = [f(xi) for xi in training_set_x]
-n = train(x=training_set_x, y=training_set_y, lr=0.1, e=9500)
-test_set_x = [[0, 0], [0, 1], [1, 0], [1, 1]]
-#test_set_x = [[11], [12], [13], [14], [15], [16], [17], [18], [19], [20]]
+n = train(x=training_set_x, y=training_set_y, lr=0.01, e=950)
+# test_set_x = [[0, 0], [0, 1], [1, 0], [1, 1]]
+test_set_x = [[11], [12], [13], [14], [15], [16], [17], [18], [19], [20]]
 test_set_y = [f(xi) for xi in test_set_x]
 test(test_set_x, test_set_y, n)
+
+# training_benchmark(training_set_x, training_set_y, 0.2, 950)
+
+# Why does relu / leaky_relu take longer than sigmoid? it learns at 0.2, 950 but sigmoid learns at 0.1, 950
